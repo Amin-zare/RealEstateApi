@@ -22,6 +22,7 @@ if (app.Environment.IsDevelopment())
 
 app.MapCompanyEndpoints();
 app.MapApartmentEndpoints();
+app.MapWebhookEndpoints();
 app.UseHttpsRedirection();
 
 app.Run();
