@@ -24,8 +24,8 @@
                 options.AddDefaultPolicy(policy =>
                 {
                     policy.WithOrigins(allowedOrigins)
-                          .AllowAnyHeader()
-                          .AllowAnyMethod();
+                          .WithHeaders("Authorization", "Accept")
+                          .WithMethods("GET", "POST");
                     if (allowCredentials)
                     {
                         policy.AllowCredentials();

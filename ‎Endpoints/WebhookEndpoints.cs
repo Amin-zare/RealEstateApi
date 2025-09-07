@@ -9,10 +9,26 @@ public static class WebhookEndpoints
     public static IEndpointRouteBuilder MapWebhookEndpoints(this IEndpointRouteBuilder app)
     {
         app.MapPost("/webhook/apartment-updated",
-            async (AppDbContext db,
+            async (HttpRequest req,
+            AppDbContext db,
                    ILogger<Program> logger,
+                   IConfiguration cfg,
                    ApartmentUpdate dto) =>
             {
+                // secret
+                var expected = cfg["WebhookSecret"];
+                if (string.IsNullOrEmpty(expected))
+                {
+                    logger.LogError("Missing WebhookSecret in configuration. Rejecting webhook.");
+                    return Results.Unauthorized();
+                }
+                var provided = req.Headers["X-Webhook-Secret"].ToString();
+                if (string.IsNullOrEmpty(provided) || provided != expected)
+                {
+                    logger.LogWarning("Invalid WebhookSecret provided. Rejecting webhook.");
+                    return Results.Unauthorized();
+                }
+
                 // Basic validation
                 if (dto.ApartmentId <= 0) return Results.BadRequest("Invalid ApartmentId.");
 
@@ -27,6 +43,9 @@ public static class WebhookEndpoints
                 if (dto.IsRenovated is not null) apt.IsRenovated = dto.IsRenovated.Value;
 
                 await db.SaveChangesAsync();
+
+                logger.LogInformation("Webhook applied: ApartmentId {ApartmentId}",
+                     dto.ApartmentId);
 
                 return Results.NoContent();
             })
