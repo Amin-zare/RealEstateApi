@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using RealEstateApi.Data;
+using RealEstateApi.Endpoints;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,6 +20,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.MapCompanyEndpoints();
+app.MapApartmentEndpoints();
 app.UseHttpsRedirection();
 
 app.Run();
