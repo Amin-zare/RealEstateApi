@@ -1,5 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
-using RealEstateApi.Data;
+﻿using RealEstateApi.Data;
 using RealEstateApi.Dtos;
 
 namespace RealEstateApi.Endpoints;
@@ -10,47 +9,54 @@ public static class WebhookEndpoints
     {
         app.MapPost("/webhook/apartment-updated",
             async (HttpRequest req,
-            AppDbContext db,
-                   ILogger<Program> logger,
-                   IConfiguration cfg,
-                   ApartmentUpdate dto) =>
+             AppDbContext db,
+            ILogger<Program> logger,
+            IConfiguration cfg,
+            ApartmentUpdate dto) =>
             {
-                // secret
+
                 var expected = cfg["WebhookSecret"];
                 if (string.IsNullOrEmpty(expected))
                 {
-                    logger.LogError("Missing WebhookSecret in configuration. Rejecting webhook.");
-                    return Results.Unauthorized();
-                }
-                var provided = req.Headers["X-Webhook-Secret"].ToString();
-                if (string.IsNullOrEmpty(provided) || provided != expected)
-                {
-                    logger.LogWarning("Invalid WebhookSecret provided. Rejecting webhook.");
+                    logger.LogWarning("Webhook secret is not configured.");
                     return Results.Unauthorized();
                 }
 
-                // Basic validation
-                if (dto.ApartmentId <= 0) return Results.BadRequest("Invalid ApartmentId.");
+                if (dto is null)
+                    return Results.BadRequest("Invalid request body.");
 
-                // Apply update
-                var apt = await db.Apartments.FirstOrDefaultAsync(a => a.Id == dto.ApartmentId);
-                if (apt is null)
+                if (!req.Headers.TryGetValue("X-Webhook-Secret", out var providedHeader) || string.IsNullOrEmpty(providedHeader))
+
+                if (providedHeader.Count != 1 || string.IsNullOrEmpty(providedHeader[0]))
                 {
-                    logger.LogWarning("Apartment not found for webhook update. Id: {ApartmentId}", dto.ApartmentId);
-                    return Results.NoContent();
+                    logger.LogWarning("Missing or invalid X-Webhook-Secret header (must be exactly one non-empty value).");
+                    return Results.Unauthorized();
                 }
+
+                var providedBytes = System.Text.Encoding.UTF8.GetBytes(providedHeader);
+                var expectedBytes = System.Text.Encoding.UTF8.GetBytes(expected);
+                if (providedBytes.Length != expectedBytes.Length ||
+                    !System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(providedBytes, expectedBytes))
+                {
+                    logger.LogWarning("Invalid webhook secret provided.");
+                    return Results.Unauthorized();
+                }
+
+                if (dto.ApartmentId <= 0)
+                    return Results.BadRequest("Invalid ApartmentId.");
+
+                var apt = await db.Apartments.FindAsync(dto.ApartmentId);
+                if (apt is null) return Results.NotFound();
 
                 if (dto.IsRenovated is not null) apt.IsRenovated = dto.IsRenovated.Value;
 
                 await db.SaveChangesAsync();
-
                 logger.LogInformation("Webhook applied: ApartmentId {ApartmentId}",
                      dto.ApartmentId);
-
                 return Results.NoContent();
             })
-            .WithName("WebhookApartmentUpdated")
-            .WithOpenApi();
+           .WithName("WebhookApartmentUpdated")
+           .WithOpenApi();
 
         return app;
     }
