@@ -8,15 +8,23 @@ public static class ApartmentEndpoints
     public static IEndpointRouteBuilder MapApartmentEndpoints(this IEndpointRouteBuilder app)
     {
         app.MapGet("/companies/{companyId:int}/apartments",
-            async (int companyId, AppDbContext db, ILogger<Program> logger) =>
+            async (int companyId, AppDbContext db, ILogger<Program> logger, CancellationToken ct, int? skip, int? take) =>
             {
+                const int DefaultTake = 50;
+                const int MaxTake = 200;
+                int actualSkip = (skip.HasValue && skip.Value >= 0) ? skip.Value : 0;
+                int actualTake = (take.HasValue && take.Value > 0) ? Math.Min(take.Value, MaxTake) : DefaultTake;
+
                 var apartments = await db.Apartments
                     .Where(a => a.CompanyId == companyId)
+                    .OrderBy(a => a.Id)
                     .AsNoTracking()
-                    .ToListAsync();
+                    .Skip(actualSkip)
+                    .Take(actualTake)
+                    .ToListAsync(ct);
 
-                logger.LogInformation("Fetched {Count} apartments for CompanyId {CompanyId}",
-                    apartments.Count, companyId);
+                logger.LogInformation("Fetched {Count} apartments for CompanyId {CompanyId} (skip={Skip}, take={Take})",
+                    apartments.Count, companyId, actualSkip, actualTake);
 
                 return Results.Ok(apartments);
             })
