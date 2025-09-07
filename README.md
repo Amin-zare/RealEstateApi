@@ -48,24 +48,17 @@ dotnet tool install --global dotnet-ef
 
 ---
 
-## Konfiguration (Connection String)
+## Konfiguration
 
-Exempel:  
+Skapa en fil med namnet ` appsettings.Development.json`  i projektroten och kopiera innehållet från ` appsettings.Template.json` .
+Ersätt därefter de exempelvärden som finns i appsettings.Template.json med riktiga värden i den nya filen.
 
-```json
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "Server=YOUR_SERVER;Database=YOUR_DB;Trusted_Connection=True;TrustServerCertificate=True;"
-  }
-}
-```
-
- Placera i `appsettings.Development.json`  
  Alternativ: använd **User Secrets** (rekommenderas i dev):  
 
 ```bash
 dotnet user-secrets init
 dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Server=...;Database=...;..."
+osv
 ```
 
 ---
