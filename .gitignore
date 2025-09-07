@@ -416,3 +416,6 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# Local configuration (should not be committed to Git)
+appsettings.Development.json
