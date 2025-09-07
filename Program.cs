@@ -2,6 +2,9 @@ using Microsoft.EntityFrameworkCore;
 using RealEstateApi.Data;
 using RealEstateApi.Endpoints;
 using RealEstateApi.Extensions;
+using RealEstateApi.Middleware;
+
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,6 +26,7 @@ if (app.Environment.IsDevelopment())
 }
 // Enable CORS
 app.UseCors();
+app.UseMiddleware<ApiTokenMiddleware>();
 
 app.MapCompanyEndpoints();
 app.MapApartmentEndpoints();
