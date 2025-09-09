@@ -1,39 +1,83 @@
-﻿namespace RealEstateApi.Middleware;
+﻿using System.Security.Cryptography;
+using System.Text;
+
+namespace RealEstateApi.Middleware;
 
 public class ApiTokenMiddleware
 {
     private readonly RequestDelegate _next;
-    private readonly string _expected;
+    private readonly string? _apiToken;
+    private readonly string? _webhookSecret;
 
     public ApiTokenMiddleware(RequestDelegate next, IConfiguration cfg)
     {
         _next = next;
-        var apiToken = cfg["ApiToken"];
-        if (string.IsNullOrWhiteSpace(apiToken))
-            throw new InvalidOperationException("Missing ApiToken configuration. Please set 'ApiToken' in your appsettings or environment variables.");
-        _expected = apiToken;
+        _apiToken = cfg["ApiToken"];           
+        _webhookSecret = cfg["WebhookSecret"]; 
+        if (string.IsNullOrWhiteSpace(_apiToken) && string.IsNullOrWhiteSpace(_webhookSecret))
+            throw new InvalidOperationException("At least one of ApiToken or WebhookSecret must be set.");
     }
 
     public async Task InvokeAsync(HttpContext context)
     {
-    var auth = context.Request.Headers["Authorization"].ToString();
+        const string bearer = "Bearer ";
+        var authHeaderValue = context.Request.Headers["Authorization"].ToString();
+        var xSecret = context.Request.Headers["X-Webhook-Secret"].ToString().Trim();
 
-        if (string.IsNullOrWhiteSpace(auth) ||
-            !auth.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+        var hasAuth = !string.IsNullOrWhiteSpace(authHeaderValue);
+        var hasX = !string.IsNullOrWhiteSpace(xSecret);
+
+        bool ok = false;
+
+        if (hasAuth)
         {
-            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-            await context.Response.WriteAsync("Missing token");
-            return;
+            if (authHeaderValue.StartsWith(bearer, StringComparison.OrdinalIgnoreCase))
+            {
+                var provided = authHeaderValue.Substring(bearer.Length).Trim();
+                if (!string.IsNullOrEmpty(_apiToken))
+                    ok |= TimeConstantEquals(provided, _apiToken);
+            }
         }
 
-        var provided = auth.Substring("Bearer ".Length).Trim();
-
-        if (!string.Equals(provided, _expected, StringComparison.Ordinal))
+        if (hasX && !string.IsNullOrEmpty(_webhookSecret))
         {
-            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            ok |= TimeConstantEquals(xSecret, _webhookSecret);
+        }
+
+        if (ok)
+        {
+            string method = hasAuth ? "Bearer token" : hasX ? "Webhook secret" : "Unknown";
+        }
+
+        if (!ok)
+        {
+            string method = hasAuth ? "Bearer token" : hasX ? "Webhook secret" : "None";
+            var statusCode = (hasAuth || hasX)
+                ? StatusCodes.Status403Forbidden
+                : StatusCodes.Status401Unauthorized;
+            context.Response.StatusCode = statusCode;
+
+            context.Response.Headers["Cache-Control"] = "no-store";
+            context.Response.Headers["Pragma"] = "no-cache";
+            context.Response.Headers["Expires"] = "0";
+            context.Response.ContentType = "text/plain; charset=utf-8";
+
+            if (statusCode == StatusCodes.Status401Unauthorized)
+            {
+                context.Response.Headers["WWW-Authenticate"] = "Bearer realm=\"api\"";
+            }
+
+            await context.Response.WriteAsync("Unauthorized");
             return;
         }
 
         await _next(context);
+    }
+
+    private static bool TimeConstantEquals(string a, string b)
+    {
+        var ba = Encoding.UTF8.GetBytes(a);
+        var bb = Encoding.UTF8.GetBytes(b);
+        return CryptographicOperations.FixedTimeEquals(ba, bb);
     }
 }

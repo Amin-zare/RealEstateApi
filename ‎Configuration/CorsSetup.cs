@@ -24,7 +24,7 @@
                 options.AddDefaultPolicy(policy =>
                 {
                     policy.WithOrigins(allowedOrigins)
-                          .WithHeaders("Authorization", "Accept")
+                          .WithHeaders("Authorization", "Accept", "Content-Type", "X-Webhook-Secret")
                           .WithMethods("GET", "POST");
                     if (allowCredentials)
                     {
