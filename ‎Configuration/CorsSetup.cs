@@ -11,6 +11,8 @@
                 .Where(o => !string.IsNullOrEmpty(o))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToArray();
+
+            // Optional CORS credentials flag (defaults to false if missing); included for future enablement without code changes.
             var allowCredentials = configuration.GetValue<bool>("Cors:AllowCredentials", false);
 
             if (allowedOrigins.Length == 0)

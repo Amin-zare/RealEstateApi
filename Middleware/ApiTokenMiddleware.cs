@@ -43,6 +43,7 @@ public class ApiTokenMiddleware
         {
             ok |= TimeConstantEquals(xSecret, _webhookSecret);
         }
+        // NOTE: 'method' is currently unused; it's kept for potential logging/diagnostics to indicate which auth mechanism was presented.
 
         if (ok)
         {
