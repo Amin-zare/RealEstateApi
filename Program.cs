@@ -3,6 +3,8 @@ using RealEstateApi.Data;
 using RealEstateApi.Endpoints;
 using RealEstateApi.Extensions;
 using RealEstateApi.Middleware;
+using RealEstateApi.Repositories;
+
 
 
 
@@ -11,6 +13,10 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDbContext<AppDbContext>(opts =>
     opts.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.AddScoped<ICompanyRepository, CompanyRepository>();
+builder.Services.AddScoped<IApartmentRepository, ApartmentRepository>();
+
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
