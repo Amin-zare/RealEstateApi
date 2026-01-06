@@ -1,13 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using RealEstateApi.Data;
-using RealEstateApi.Endpoints;
 using RealEstateApi.Extensions;
 using RealEstateApi.Middleware;
 using RealEstateApi.Repositories;
 using RealEstateApi.Services;
-
-
-
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -25,6 +21,9 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddCorsPolicy(builder.Configuration);
 
+builder.Services.AddControllers();
+
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -38,9 +37,6 @@ app.UseCors();
 app.UseMiddleware<ApiTokenMiddleware>();
 app.UseHttpsRedirection();
 
-
-app.MapCompanyEndpoints();
-app.MapApartmentEndpoints();
-app.MapWebhookEndpoints();
+app.MapControllers();
 
 app.Run();
