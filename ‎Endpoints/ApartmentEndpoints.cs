@@ -1,4 +1,4 @@
-﻿using RealEstateApi.Repositories;
+﻿using RealEstateApi.Services;
 
 
 namespace RealEstateApi.Endpoints;
@@ -8,7 +8,7 @@ public static class ApartmentEndpoints
     public static IEndpointRouteBuilder MapApartmentEndpoints(this IEndpointRouteBuilder app)
     {
         app.MapGet("/companies/{companyId:int}/apartments",
-            async (int companyId, IApartmentRepository apartmentRepo, ILogger<Program> logger, CancellationToken ct, int? skip, int? take) =>
+            async (int companyId, IApartmentService apartmentService, ILogger<Program> logger, CancellationToken ct, int? skip, int? take) =>
             {
                 const int DefaultTake = 50;
                 const int MaxTake = 200;
@@ -16,11 +16,7 @@ public static class ApartmentEndpoints
                 int actualSkip = (skip.HasValue && skip.Value >= 0) ? skip.Value : 0;
                 int actualTake = (take.HasValue && take.Value > 0) ? Math.Min(take.Value, MaxTake) : DefaultTake;
 
-                var apartments = await apartmentRepo.GetCompanyApartmentsAsync(
-                    companyId: companyId,
-                    skip: actualSkip,
-                    take: actualTake,
-                    ct: ct);
+                var apartments = await apartmentService.GetCompanyApartmentsAsync(companyId, actualSkip, actualTake, ct);
 
                 logger.LogInformation(
                     "Fetched {Count} apartments for CompanyId {CompanyId} (skip={Skip}, take={Take})",
@@ -32,13 +28,11 @@ public static class ApartmentEndpoints
             .WithOpenApi();
 
         app.MapGet("/companies/{companyId:int}/apartments/expiring",
-            async (int companyId, IApartmentRepository apartmentRepo, ILogger<Program> logger) =>
+            async (int companyId, IApartmentService apartmentService, ILogger<Program> logger) =>
             {
                 var limit = DateTime.UtcNow.AddMonths(3);
 
-                var apartments = await apartmentRepo.GetExpiringApartmentsAsync(
-                    companyId: companyId,
-                    limitUtc: limit);
+                var apartments = await apartmentService.GetExpiringApartmentsAsync(companyId, limit);
 
                 logger.LogInformation(
                     "Fetched {Count} expiring apartments (LeaseEnd <= {Limit}) for CompanyId {CompanyId}",
@@ -50,6 +44,6 @@ public static class ApartmentEndpoints
             .WithOpenApi();
 
 
-                return app;
+        return app;
             }
 }

@@ -1,4 +1,4 @@
-﻿using RealEstateApi.Repositories;
+﻿using RealEstateApi.Services;
 
 namespace RealEstateApi.Endpoints;
 
@@ -7,12 +7,7 @@ public static class CompanyEndpoints
     public static IEndpointRouteBuilder MapCompanyEndpoints(this IEndpointRouteBuilder app)
     {
         app.MapGet("/companies",
-            static async (
-                ICompanyRepository companyRepo,
-                ILogger<Program> logger,
-                int? skip,
-                int? take,
-                CancellationToken ct) =>
+            static async (ICompanyService companyService, ILogger<Program> logger, int? skip, int? take, CancellationToken ct) =>
             {
                 const int DefaultTake = 50;
                 const int MaxTake = 200;
@@ -22,19 +17,17 @@ public static class CompanyEndpoints
                     ? Math.Min(take.Value, MaxTake)
                     : DefaultTake;
 
-                var companies = await companyRepo.GetCompaniesAsync(
-                    actualSkip,
-                    actualTake,
-                    ct);
+                var companies = await companyService.GetCompaniesAsync(actualSkip, actualTake, ct);
 
                 logger.LogInformation(
-                    "Fetched {Count} companies from database (skip={Skip}, take={Take})",
+                    "Fetched {Count} companies (skip={Skip}, take={Take})",
                     companies.Count, actualSkip, actualTake);
 
                 return Results.Ok(companies);
             })
             .WithName("GetCompanies")
             .WithOpenApi();
+
 
         return app;
     }

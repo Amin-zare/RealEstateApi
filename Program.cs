@@ -4,6 +4,8 @@ using RealEstateApi.Endpoints;
 using RealEstateApi.Extensions;
 using RealEstateApi.Middleware;
 using RealEstateApi.Repositories;
+using RealEstateApi.Services;
+
 
 
 
@@ -16,7 +18,8 @@ builder.Services.AddDbContext<AppDbContext>(opts =>
 
 builder.Services.AddScoped<ICompanyRepository, CompanyRepository>();
 builder.Services.AddScoped<IApartmentRepository, ApartmentRepository>();
-
+builder.Services.AddScoped<ICompanyService, CompanyService>();
+builder.Services.AddScoped<IApartmentService, ApartmentService>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -33,10 +36,11 @@ if (app.Environment.IsDevelopment())
 // Enable CORS
 app.UseCors();
 app.UseMiddleware<ApiTokenMiddleware>();
+app.UseHttpsRedirection();
+
 
 app.MapCompanyEndpoints();
 app.MapApartmentEndpoints();
 app.MapWebhookEndpoints();
-app.UseHttpsRedirection();
 
 app.Run();
